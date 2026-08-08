@@ -558,7 +558,9 @@ function makeSpecialPage({ id, title, path, summary, markdown, generatedAt, scan
 
 function buildIndexMarkdown(snapshot) {
   const byFolder = new Map();
-  snapshot.pages
+  const pages = Array.isArray(snapshot.pages) ? snapshot.pages : [];
+  const rawSources = Array.isArray(snapshot.rawSources) ? snapshot.rawSources : [];
+  pages
     .filter((page) => !["index.md", "log.md"].includes(page.path))
     .forEach((page) => {
       const entries = byFolder.get(page.folder) || [];
@@ -573,7 +575,7 @@ function buildIndexMarkdown(snapshot) {
     `- Snapshot: ${snapshot.id}`,
     `- Scan: ${snapshot.scanId}`,
     `- Generated: ${snapshot.generatedAt}`,
-    `- Raw sources: ${snapshot.rawSources.map((source) => source.id).join(", ")}`,
+    `- Raw sources: ${rawSources.map((source) => source.id).join(", ") || "none recorded"}`,
     ""
   ];
   [...byFolder.keys()].sort().forEach((folder) => {
@@ -606,7 +608,10 @@ function refreshSnapshotControlPages(snapshot) {
   const generatedAt = new Date().toISOString();
   const schema = wikiMaintenanceSchema();
   snapshot.schema = schema;
-  snapshot.pages = snapshot.pages.filter((page) => !["index.md", "log.md"].includes(page.path));
+  snapshot.pages = (Array.isArray(snapshot.pages) ? snapshot.pages : [])
+    .filter((page) => !["index.md", "log.md"].includes(page.path));
+  snapshot.rawSources = Array.isArray(snapshot.rawSources) ? snapshot.rawSources : [];
+  snapshot.logEntries = Array.isArray(snapshot.logEntries) ? snapshot.logEntries : [];
   snapshot.pages.unshift(
     makeSpecialPage({
       id: `${snapshot.id}-index`,
