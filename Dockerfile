@@ -1,17 +1,27 @@
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
+FROM python:3.12-slim
 
-FROM node:20-alpine AS runtime
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    APP_HOST=0.0.0.0 \
+    APP_PORT=8080 \
+    DATA_DIR=/data
+
 WORKDIR /app
-ENV NODE_ENV=production
-ENV PORT=8080
-COPY package*.json ./
-RUN npm install --omit=dev
-COPY --from=build /app/dist ./dist
-COPY server ./server
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app ./app
+
+RUN useradd -r -u 10001 -g root pkgmng \
+    && mkdir -p /data \
+    && chown -R pkgmng:root /data /app
+
+USER pkgmng
 EXPOSE 8080
-CMD ["node", "server/index.js"]
+
+CMD ["python", "-m", "app.main"]
